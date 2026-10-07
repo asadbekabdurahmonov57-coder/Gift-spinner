@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Spinner</title>
+    <!-- Telegram WebApp kutubxonasi -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #121216;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .balance-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #1e1e28;
+            border: 2px solid #2a2a3b;
+            padding: 10px 18px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 20;
+        }
+
+        .balance-box span { color: #00e5ff; }
+
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 20px;
+            z-index: 20;
+        }
+
+        .case-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 160px;
+            background: #1a1a24;
+            border-top: 2px solid #2a2a3b;
+            border-bottom: 2px solid #2a2a3b;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        .embers-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; overflow: hidden; z-index: 1;
+        }
+
+        .ember {
+            position: absolute; bottom: -10px;
+            background: radial-gradient(circle, #ffcc00 0%, #ff3b00 100%);
+            border-radius: 50%; opacity: 0.8;
+            box-shadow: 0 0 6px #ff5500;
+            animation: riseUp linear infinite;
+        }
+
+        @keyframes riseUp {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            20% { opacity: 0.9; }
+            100% { transform: translateY(-180px) scale(0.3); opacity: 0; }
+        }
+
+        .pointer {
+            position: absolute; left: 50%; top: 0; bottom: 0; width: 4px;
+            background: #3b82f6; z-index: 15; transform: translateX(-50%);
+            box-shadow: 0 0 10px #3b82f6;
+        }
+
+        .case-track { display: flex; position: absolute; left: 0; will-change: transform; z-index: 5; }
+
+        .case-item {
+            min-width: 120px; height: 130px; background: #232333;
+            border: 2px solid #32324a; border-radius: 12px; margin: 0 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-sizing: border-box; flex-shrink: 0;
+        }
+
+        .case-item img { width: 52px; height: 52px; object-fit: contain; margin-bottom: 6px; }
+        .case-item .name { font-size: 13px; font-weight: 600; color: #d1d5db; }
+        .case-item .value { font-size: 12px; color: #00e5ff; margin-top: 2px; font-weight: bold; }
+
+        .roll-btn, .promo-btn {
+            margin-top: 15px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white; border: none; padding: 12px 30px;
+            font-size: 16px; font-weight: bold; border-radius: 12px;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            z-index: 20; text-transform: uppercase;
+        }
+
+        .roll-btn:disabled { opacity: 0.6; cursor: not-allowed; background: #4b5563; }
+
+        #result { margin-top: 15px; font-size: 18px; font-weight: bold; color: #fbbf24; z-index: 20; height: 25px; }
+
+        /* Promokod input */
+        .promo-section {
+            margin-top: 15px; display: flex; gap: 10px; z-index: 20;
+        }
+        .promo-input {
+            background: #1e1e28; border: 2px solid #2a2a3b; color: white;
+            padding: 10px 15px; border-radius: 10px; outline: none; font-size: 14px;
+        }
+
+        /* Profile & Admin button */
+        .profile-icon-btn {
+            position: absolute; bottom: 90px; right: 25px;
+            background: #1e1e28; border: 2px solid #2a2a3b; width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 30;
+        }
+        .profile-icon-btn svg { width: 24px; height: 24px; fill: #00e5ff; }
+
+        /* Admin panel floating button (faqat admin uchun chiqadi) */
+        .admin-badge {
+            position: absolute; top: 20px; left: 20px;
+            background: #ef4444; color: white; padding: 6px 14px;
+            border-radius: 20px; font-weight: bold; font-size: 14px; display: none; z-index: 30;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+            z-index: 100; opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #1a1a24; border: 2px solid #2a2a3b; padding: 25px;
+            border-radius: 16px; width: 300px; text-align: center;
+        }
+        .close-modal { margin-top: 15px; background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-badge" id="adminBadge">🛡️ Admin Panel</div>
+
+    <div class="balance-box">
+        <span>Balance: <strong id="balance">0.0</strong> USDT</span>
+    </div>
+
+    <div class="header">Sweet Gifty Case</div>
+
+    <div class="case-container" id="container">
+        <div class="embers-container" id="embers"></div>
+        <div class="pointer"></div>
+        <div class="case-track" id="track"></div>
+    </div>
+
+    <button class="roll-btn" id="rollBtn" onclick="startRoll()">ROLL</button>
+    <div id="result"></div>
+
+    <!-- Promokod kiritish joyi -->
+    <div class="promo-section">
+        <input type="text" id="promoInput" class="promo-input" placeholder="Promokodni kiriting...">
+        <button class="promo-btn" onclick="applyPromo()">Faollashtirish</button>
+    </div>
+
+    <div class="profile-icon-btn" onclick="openModal()">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+    </div>
+
+    <div class="modal-overlay" id="profileModal" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>Profil Ma'lumotlari</h3>
+            <p>Telegram ID: <span id="userIdText">Aniqlanmoqda...</span></p>
+            <p>Balans: <span id="modalBalance">0.0</span> USDT</p>
+            <button class="close-modal" onclick="closeModal()">Yopish</button>
+        </div>
+    </div>
+
+    <script>
+        // Telegram WebApp orqali foydalanuvchi ID sini aniqlash
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        const ADMIN_TELEGRAM_ID = 6741153061;
+        let currentUserTelegramId = tg.initDataUnsafe?.user?.id || 6741153061; // Test uchun default admin
+
+        if (currentUserTelegramId === ADMIN_TELEGRAM_ID) {
+            document.getElementById('adminBadge').style.display = 'block';
+        }
+
+        let userBalance = parseFloat(localStorage.getItem('userBalance')) || 0.0;
+        document.getElementById('balance').innerText = userBalance;
+        document.getElementById('userIdText').innerText = currentUserTelegramId;
+        document.getElementById('modalBalance').innerText = userBalance;
+
+        function updateBalance(amount) {
+            userBalance = parseFloat((userBalance + amount).toFixed(1));
+            document.getElementById('balance').innerText = userBalance;
+            document.getElementById('modalBalance').innerText = userBalance;
+            localStorage.setItem('userBalance', userBalance);
+        }
+
+        // Promokodlarni tekshirish funksiyasi
+        function applyPromo() {
+            const code = document.getElementById('promoInput').value.trim().toUpperCase();
+            // Oddiy demo promokodlar (Bularni bot bazasidan ham ulash mumkin)
+            const promos = { "GIFT2026": 1.0, "SUPERADMIN": 5.0 };
+
+            if (promos[code]) {
+                updateBalance(promos[code]);
+                alert(`Tabriklaymiz! +${promos[code]} USDT qo'shildi.`);
+                document.getElementById('promoInput').value = '';
+            } else {
+                alert("Noto'g'ri yoki eskirgan promokod!");
+            }
+        }
+
+        // Qolgan case va cho'g' (embers) funksiyalari o'z joyida qoladi...
+        function openModal() { document.getElementById('profileModal').classList.add('active'); }
+        function closeModal() { document.getElementById('profileModal').classList.remove('active'); }
+    </script>
+</body>
+</html>
