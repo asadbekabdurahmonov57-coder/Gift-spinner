@@ -1,16 +1,31 @@
 const { Telegraf, Markup } = require('telegraf');
+const express = require('express');
+const path = require('path');
 
 const TOKEN = '8836288629:AAHax7Aadt8ouksQKqxhLx4qAIuMgWcSbCM';
 const bot = new Telegraf(TOKEN);
+const app = express();
 
 const ADMIN_ID = 6741153061;
+const PORT = process.env.PORT || 3000;
 
-// Vaqtinchalik ma'lumotlar bazasi
 let db = {
     users: {},
     promoCodes: { "GIFT2026": 1.0, "SUPERADMIN": 5.0 }
 };
 
+// HTML faylni ochish uchun Express sozlamasi
+app.use(express.static(__dirname));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Serverni ishga tushirish
+app.listen(PORT, () => {
+    console.log(`Server ${PORT}-portda ishga tushdi.`);
+});
+
+// Telegram Bot logikasi
 bot.start((ctx) => {
     const userId = ctx.from.id;
     if (!db.users[userId]) {
@@ -18,10 +33,9 @@ bot.start((ctx) => {
     }
 
     const isAdmin = userId === ADMIN_ID;
-
-    // Railway-ga joylaganingizdan keyin quyidagi 'https://SIZNING-DOMEN.up.railway.app' 
-    // manzilini o'zingizning haqiqiy sayt havolangizga o'zgartirasiz.
-    const webAppUrl = process.env.WEBAPP_URL || 'https://sizning-domen.up.railway.app';
+    
+    // Fly.io bergan domen (masalan: https://giftnice-bot.fly.dev)
+    const webAppUrl = process.env.WEBAPP_URL || `https://giftnice-bot.fly.dev`;
 
     let keyboard = [
         [Markup.button.webApp("🎮 Case Ochish", webAppUrl)],
@@ -103,7 +117,7 @@ bot.action('stats', (ctx) => {
 
 bot.action('back_start', (ctx) => {
     ctx.answerCbQuery();
-    const webAppUrl = process.env.WEBAPP_URL || 'https://sizning-domen.up.railway.app';
+    const webAppUrl = process.env.WEBAPP_URL || `https://giftnice-bot.fly.dev`;
     ctx.editMessageText("Bosh menyu:", Markup.inlineKeyboard([
         [Markup.button.webApp("🎮 Case Ochish", webAppUrl)],
         [Markup.button.callback("⚙️ Admin Panel", "admin_panel")]
@@ -111,4 +125,4 @@ bot.action('back_start', (ctx) => {
 });
 
 bot.launch();
-console.log("Bot muvaffaqiyatli ishga tushdi!");
+console.log("Telegram bot ishga tushdi!");
